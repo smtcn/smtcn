@@ -86,11 +86,11 @@ class Engine
         $this->loader->register('request', '\app\net\Request');
         $this->loader->register('response', '\app\net\Response');
         $this->loader->register('router', '\app\net\Router');
-        $this->loader->register('view', '\app\show\View', array(), function ($view) use ($self) {
-            $view->path = $self->get('web.views.path');
-            $view->cache = $self->get('web.views.cache');
-            $view->cache_time = $self->get('web.views.time');
-            $view->extension = $self->get('web.views.extension');
+        $this->loader->register('view', '\app\mark\View', array(), function ($view) use ($self) {
+            $view->path = $self->get('cms.views.path');
+            $view->cache = $self->get('cms.views.cache');
+            $view->cacheTime = $self->get('cms.views.cacheTime');
+            $view->extension = $self->get('cms.views.extension');
         });
 
         // Register framework methods
@@ -103,51 +103,49 @@ class Engine
         }
 
         // Default configuration settings
-        $this->set('web.base_url', null);
-        $this->set('web.case_sensitive', false);
-        $this->set('web.handle_errors', true);
-        $this->set('web.log_errors', false);
-        $this->set('web.views.time', 0);
-        $this->set('web.views.path', __DIR__ . '/theme');
-        $this->set('web.views.extension', '.php');
-        $this->set('web.views.cache', __DIR__ . '/theme/cache');
-        $this->set('web.content_length', true);
+        $this->set('cms.base_url', null);
+        $this->set('cms.case_sensitive', false);
+        $this->set('cms.handle_errors', true);
+        $this->set('cms.log_errors', false);
+        $this->set('cms.views.path', __DIR__ . '/theme');
+        $this->set('cms.views.cache', __DIR__ . '/theme/cache');
+        $this->set('cms.views.cacheTime', 0);
+        $this->set('cms.views.extension', '.php');
+        $this->set('cms.content_length', true);
 
-        $this->set('system.router', include_once __DIR__ . '/config/router.php');
+        // Route mapping
+        $self->set('system.router', require 'config/router.php');
 
         // Startup configuration
         $this->before('start', function () use ($self) {
             // Enable error handling
-            if ($self->get('web.handle_errors')) {
+            if ($self->get('cms.handle_errors')) {
                 set_error_handler(array($self, 'handleError'));
                 set_exception_handler(array($self, 'handleException'));
             }
 
             // Set case-sensitivity
-            $self->router()->case_sensitive = $self->get('web.case_sensitive');
+            $self->router()->case_sensitive = $self->get('cms.case_sensitive');
             // Set Content-Length
-            $self->response()->content_length = $self->get('web.content_length');
+            $self->response()->content_length = $self->get('cms.content_length');
         });
 
-        // Matching route for the current request
-        $this->initRoute();
-
         $initialized = true;
+
+        // 初始化路由
+        $self->initRoute();
     }
 
-    /**
-     * Matching route for the current request.
-     */
+    // initRoute
     public function initRoute()
     {
         $router = $this->get('system.router');
+
         if (is_array($router)) {
             foreach ($router as $route) {
                 $tmp = explode(':', $route[1]);
-                $class = 'app\libs\\' . trim(str_replace('/', '\\', $tmp[0]), '\\') . 'Controller';
-                $func = $tmp[1];
-                $pattern = $route[0];
-                $this->route($pattern, array($class, $func));
+                $class = 'app\\libs\\' . trim(str_replace('/', '\\', $tmp[0]), '\\') . 'Controller';
+                $this->route($route[0], array($class, $tmp[1]));
             }
         }
     }
@@ -175,7 +173,7 @@ class Engine
      */
     public function handleException($e)
     {
-        if ($this->get('web.log_errors')) {
+        if ($this->get('cms.log_errors')) {
             error_log($e->getMessage());
         }
 
@@ -461,7 +459,7 @@ class Engine
      */
     public function _redirect($url, $code = 303)
     {
-        $base = $this->get('web.base_url');
+        $base = $this->get('cms.base_url');
 
         if ($base === null) {
             $base = $this->request()->base;

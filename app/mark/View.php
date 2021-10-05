@@ -1,6 +1,6 @@
 <?php
 
-namespace app\show;
+namespace app\mark;
 
 class View
 {
@@ -9,7 +9,14 @@ class View
      *
      * @var string
      */
-    public $path;
+    public $path = './theme';
+
+    /**
+     * Location of view templates cache.
+     *
+     * @var string
+     */
+    public $cache = './theme/cache';
 
     /**
      * File extension.
@@ -19,18 +26,11 @@ class View
     public $extension = '.php';
 
     /**
-     * Cache directory.
-     *
-     * @var string
-     */
-    public $cache = './theme/cache';
-
-    /**
-     * Cache times.
+     * File cache times.
      *
      * @var integer
      */
-    public $cache_time = 0;
+    public $cacheTime = 0;
 
     /**
      * View variables.
@@ -47,7 +47,7 @@ class View
     private $template;
 
     /**
-     * Template replace.
+     * Template to replace.
      *
      * @var array
      */
@@ -61,7 +61,7 @@ class View
         '~\{(\$[a-z0-9_]+)\.([a-z0-9_]+)\.([a-z0-9_]+)\}~i' => '<?php echo $1[\'$2\'][\'$3\'] ?>',
         # {$arr.key.key2}
 
-        '~\{(include_once|require_once|include|require)\s*\(\s*(.+?)\s*\)\s*\s*\}~i' => '<?php include_once \$this->_include($2, __FILE__); ?>',
+        '~\{(include_once|require_once|include|require)\s*\(\s*(.+?)\s*\)\s*\s*\}~i' => '<?php \$this->_include($2) ?>',
         # {include('inc/top.php')}
 
         '~\{:(.+?)\}~' => '<?php echo $1 ?>',
@@ -103,38 +103,15 @@ class View
     }
 
     /**
-     * Citation file.
+     * Gets the load of a template file.
      *
      * @param string $file Template file
-     * @throws \Exception If template not found
+     * @param array $data Template data
+     * @return string load of template file
      */
     public function _include($file)
     {
-        $this->template = $this->getTemplate($file);
-
-        if (!file_exists($this->template)) {
-            throw new \Exception("Template file not found: {$this->template}.");
-        }
-
-        if (!is_dir($this->cache)) {
-            $this->mkdirs($this->cache);
-        }
-
-        $tmpPath = $this->cache . '/' . md5(str_replace('/', '_', $this->template)) . $this->extension;
-
-        if (!$this->isCached($tmpPath)) {
-            $handle = fopen($this->template, "r") or die("File does not exist!");
-            $tmpData = fread($handle, filesize($this->template));
-            fclose($handle);
-
-            $tpl = preg_replace(array_keys($this->system_replace), $this->system_replace, $tmpData);
-
-            $handle = fopen($tmpPath, "w") or die("File does not exist!");
-            fwrite($handle, trim($tpl) . PHP_EOL);
-            fclose($handle);
-        }
-
-        return $tmpPath;
+        return $this->render($file);
     }
 
     /**
@@ -211,22 +188,24 @@ class View
 
         extract($this->vars);
 
-        if (!is_dir($this->cache)) {
-            $this->mkdirs($this->cache);
-        }
-
-        $tmpPath = $this->cache . '/' . md5(str_replace('/', '_', $this->template)) . $this->extension;
+        $tmpPath = $this->cache . '/' . md5(str_replace('/', '_', $this->cache . $this->template)) . $this->extension;
 
         if (!$this->isCached($tmpPath)) {
-            $handle = fopen($this->template, "r") or die("File does not exist!");
-            $tmpData = fread($handle, filesize($this->template));
-            fclose($handle);
+            $dataTmp = fopen($this->template, "r") or die("Not Found!");
+            if (flock($dataTmp, LOCK_SH)) {
+                $body = fread($dataTmp, filesize($this->template));
+                flock($dataTmp, LOCK_UN);
+            }
+            fclose($dataTmp);
 
-            $tpl = preg_replace(array_keys($this->system_replace), $this->system_replace, $tmpData);
+            $tpl = preg_replace(array_keys($this->system_replace), $this->system_replace, $body);
 
-            $handle = fopen($tmpPath, "w") or die("File does not exist!");
-            fwrite($handle, trim($tpl) . PHP_EOL);
-            fclose($handle);
+            $dataTmp = fopen($tmpPath, "w") or die("Not Found!");
+            if (flock($dataTmp, LOCK_EX)) {
+                fwrite($dataTmp, trim($tpl) . PHP_EOL);
+                flock($dataTmp, LOCK_UN);
+            }
+            fclose($dataTmp);
         }
 
         include $tmpPath;
@@ -282,42 +261,28 @@ class View
     }
 
     /**
-     * Gets the full path to a is cached.
+     * Checks if a template cache file exists.
      *
-     * @param string $file Cached file
-     * @return boolean Cached file boolean
+     * @param string $file Template cache file
+     * @return bool Template cache file exists
      */
-    private function isCached($file)
+    private function isCached($path)
     {
-        if (!file_exists($file)) {
+        if (!file_exists($path)) {
             return false;
         }
 
-        $cacheTime = $this->cache_time;
+        $cacheTime = $this->cacheTime;
 
         if ($cacheTime < 0) {
             return true;
         }
 
-        if (time() - filemtime($file) > $cacheTime) {
+        if (time() - filemtime($path) > $cacheTime) {
             return false;
         }
 
         return true;
-    }
-
-    /**
-     * Create a folder recursively
-     *
-     * @param string $file path
-     * @return boolean path boolean
-     */
-    private function mkdirs($file)
-    {
-        if (!is_dir(dirname($file))) {
-            $this->mkdirs(dirname($file));
-        }
-        return mkdir($file, 0750);
     }
 
     /**

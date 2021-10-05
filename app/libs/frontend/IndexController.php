@@ -2,23 +2,16 @@
 
 namespace app\libs\frontend;
 
-use \Api;
+use Api;
 
-class IndexController
+class IndexController extends BaseController
 {
-
-    /**
-     * 首页
-     * @param  [type] $cid  [description]
-     * @param  [type] $page [description]
-     * @return [type]       [description]
-     */
-    public static function index($cid, $page)
+    public static function index($cid = 0, $page = 1)
     {
-        $data = 'baidu';
+        echo parent::randomString();
 
-        Api::render('index', [
-            'data' => $data,
-        ]);
+        Api::render('index', array(
+            'title' => 'SMTCN',
+        ));
     }
 }

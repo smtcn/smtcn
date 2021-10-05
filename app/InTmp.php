@@ -10,9 +10,9 @@ class Api
     private static $engine;
 
     // Don't allow object instantiation
-    private function __construct(){}
-    private function __destruct(){}
-    private function __clone(){}
+    private function __construct() {}
+    private function __destruct() {}
+    private function __clone() {}
 
     /**
      * Handles calls to static methods.
@@ -24,15 +24,15 @@ class Api
      */
     public static function __callStatic($name, $params)
     {
-        $app = Api::app();
+        $InTmp = Api::InTmp();
 
-        return \app\core\Dispatcher::invokeMethod(array($app, $name), $params);
+        return \app\core\Dispatcher::invokeMethod(array($InTmp, $name), $params);
     }
 
     /**
      * @return \app\Engine Application instance
      */
-    public static function app()
+    public static function InTmp()
     {
         static $initialized = false;
 

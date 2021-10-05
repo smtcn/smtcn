@@ -185,11 +185,13 @@ class Request
 
         $method = self::getMethod();
 
-        // $method == 'POST' || $method == 'PUT' || $method == 'DELETE' || $method == 'PATCH'
-        if ($method == 'GET' || $method == 'POST' || $method == 'PUT' || $method == 'PATCH' || $method == 'DELETE' || $method == 'CONNECT' || $method == 'OPTIONS' || $method == 'HEAD' || $method == 'TRACE') {
-            $handle = fopen('php://input', "r") or die("File does not exist!");
-            $body = fread($handle, filesize('php://input'));
-            fclose($handle);
+        if ($method == 'POST' || $method == 'PUT' || $method == 'DELETE' || $method == 'PATCH') {
+            $dataTmp = fopen('php://input', "r") or die("Not Found!");
+            if (flock($dataTmp, LOCK_SH)) {
+                $body = fread($dataTmp, filesize('php://input'));
+                flock($dataTmp, LOCK_UN);
+            }
+            fclose($dataTmp);
         }
 
         return $body;
@@ -273,16 +275,21 @@ class Request
         return $params;
     }
 
+    /**
+     * Checks protocols is set.
+     *
+     * @return string https of http
+     */
     public static function getScheme()
     {
         if (
             (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) === 'on')
             ||
-            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
             ||
-            (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] === 'on')
+            (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && strtolower($_SERVER['HTTP_FRONT_END_HTTPS']) === 'on')
             ||
-            (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https')
+            (isset($_SERVER['REQUEST_SCHEME']) && strtolower($_SERVER['REQUEST_SCHEME']) === 'https')
         ) {
             return 'https';
         }
