@@ -10,9 +10,9 @@ class BaseController
      * @param  integer        $length [description]
      * @return [type]                 [description]
      */
-    protected static function randomString($length = 16)
+    protected static function randomString($length = 24)
     {
-        $chars = array_merge(range("a", "z"), range("A", "Z"), range(0, 9), str_split('!@#$%^&*()-_ []{}<>~`+=,.;:/?|'));
+        $chars = array_merge(range("a", "z"), range("A", "Z"), range(0, 9), str_split('~!@#$%^&*()_+?'));
         shuffle($chars);
         return implode(array_slice($chars, 1, $length));
     }

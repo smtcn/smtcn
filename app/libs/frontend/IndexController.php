@@ -8,7 +8,7 @@ class IndexController extends BaseController
 {
     public static function index($cid = 0, $page = 1)
     {
-        echo parent::randomString();
+        //parent::randomString();
 
         Api::render('index', array(
             'title' => 'SMTCN',
