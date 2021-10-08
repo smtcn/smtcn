@@ -182,6 +182,10 @@ class View
             throw new \Exception("Template file not found: {$this->template}.");
         }
 
+        if (!is_dir($this->cache)) {
+            $this->mkdirs($this->cache);
+        }
+
         if (is_array($data)) {
             $this->vars = array_merge($this->vars, $data);
         }
@@ -282,6 +286,23 @@ class View
             return false;
         }
 
+        return true;
+    }
+
+    /**
+     * Create cache directory.
+     *
+     * @param string $path path
+     * @return bool path
+     */
+    private function mkdirs($path)
+    {
+        if (!is_dir($path)) {
+            $this->mkdirs(dirname($path));
+            if (!mkdir($path, 0750)) {
+                return false;
+            }
+        }
         return true;
     }
 
